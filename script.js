@@ -50,12 +50,23 @@ fetch("https://raw.githubusercontent.com/giuliano-macedo/geodata-br-states/main/
 
     const layer = L.geoJSON(data, {
       style: function(feature) {
-        const votes = votosPorEstado[feature.properties.name];
+        const votes = votosNormalizados[feature.properties.name];
         return {
           fillColor: getColor(votes),
           color: "#000", // contorno preto
           weight: 2,
           fillOpacity: 0.7
+              // Normaliza os nomes dos estados (remove acentos)
+const votosNormalizados = {};
+
+for (const estado in votosPorEstado) {
+  const chave = estado
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+
+  votosNormalizados[chave] = votosPorEstado[estado];
+              }
         };
       },
       onEachFeature: function(feature, layer) {
