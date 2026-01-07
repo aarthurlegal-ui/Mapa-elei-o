@@ -1,34 +1,55 @@
-// Central do Brasil
-const map = L.map('map').setView([-14.2, -51.9], 4);
+// Inicializa o mapa
+var map = L.map('map').setView([-14.2, -51.9], 4); // Centro do Brasil
 
+// Adiciona o tile layer (mapa base)
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '© OpenStreetMap'
+  attribution: 'Map data © OpenStreetMap contributors'
 }).addTo(map);
 
-// Função para cores (exemplo de degradê)
-function getColor(valor) {
-  return valor > 80 ? '#ff0000' :
-         valor > 60 ? '#ff6600' :
-         valor > 40 ? '#ffcc00' :
-         valor > 20 ? '#ccff00' :
-                       '#00ff00';
+// Função para definir a cor de cada candidato
+function getColor(candidato) {
+  switch(candidato) {
+    case "Laryssa": return "#ff69b4"; // Rosa
+    case "Matheus": return "#1e90ff"; // Azul
+    default: return "#cccccc"; // Cinza neutro
+  }
 }
 
-// Estilo dos estados
+// Função para aplicar estilo a cada estado
 function style(feature) {
-  // Aqui colocamos um valor aleatório só pra exemplo
-  const valor = Math.floor(Math.random() * 100);
   return {
-    fillColor: getColor(valor),
+    fillColor: getColor(feature.properties.candidato),
     weight: 1,
     color: '#111',
     fillOpacity: 0.7
   };
 }
 
-// Carregar GeoJSON do Brasil
-fetch('brazil.geojson')
-  .then(res => res.json())
+// Função para adicionar interatividade
+function onEachFeature(feature, layer) {
+  if(feature.properties && feature.properties.name) {
+    layer.bindPopup(feature.properties.name + " - " + feature.properties.candidato);
+  }
+}
+
+// Carrega o GeoJSON oficial direto do GitHub
+fetch("https://raw.githubusercontent.com/giuliano-macedo/geodata-br-states/main/geojson/br_states.json")
+  .then(response => response.json())
   .then(data => {
-    L.geoJson(data, { style }).addTo(map);
-  });
+    // Aqui a gente adiciona uma propriedade 'candidato' pra cada estado
+    data.features.forEach(f => {
+      // Aqui você define quem ganhou em cada estado
+      switch(f.properties.name) {
+        case "São Paulo": f.properties.candidato = "Laryssa"; break;
+        case "Rio de Janeiro": f.properties.candidato = "Matheus"; break;
+        case "Minas Gerais": f.properties.candidato = "Laryssa"; break;
+        case "Bahia": f.properties.candidato = "Matheus"; break;
+        // Continua pra todos os outros estados
+        default: f.properties.candidato = "Laryssa";
+      }
+    });
+
+    // Adiciona o GeoJSON no mapa
+    L.geoJSON(data, { style: style, onEachFeature: onEachFeature }).addTo(map);
+  })
+  .catch(err => console.error("Erro ao carregar o GeoJSON:", err));
