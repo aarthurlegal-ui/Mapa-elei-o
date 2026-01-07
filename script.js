@@ -1,93 +1,77 @@
-// Inicializa o mapa centralizado no Brasil
+      // Inicializa o mapa
 var map = L.map('map').setView([-14.2, -51.9], 4);
 
-// Mapa base
+// TileLayer base
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: 'Map data © OpenStreetMap contributors'
 }).addTo(map);
 
-// Função para cores por candidato
-function getColor(candidato) {
-  switch(candidato) {
-    case "Laryssa": return "#ff69b4"; // rosa
-    case "Matheus": return "#1e90ff"; // azul
-    default: return "#cccccc"; // cinza neutro se não definido
-  }
+// Dados de votos por estado
+const votosPorEstado = {
+  "Acre": {"Laryssa":54.49,"Matheus":45.51},
+  "Alagoas": {"Laryssa":45.60,"Matheus":54.40},
+  "Amapá": {"Laryssa":50.00,"Matheus":50.00},
+  "Amazonas": {"Laryssa":48.30,"Matheus":51.70},
+  "Bahia": {"Laryssa":55.20,"Matheus":44.80},
+  "Ceará": {"Laryssa":49.00,"Matheus":51.00},
+  "Distrito Federal": {"Laryssa":52.00,"Matheus":48.00},
+  "Espírito Santo": {"Laryssa":47.50,"Matheus":52.50},
+  "Goiás": {"Laryssa":53.00,"Matheus":47.00},
+  "Maranhão": {"Laryssa":46.00,"Matheus":54.00},
+  "Mato Grosso": {"Laryssa":54.49,"Matheus":45.51},
+  "Mato Grosso do Sul": {"Laryssa":45.00,"Matheus":55.00},
+  "Minas Gerais": {"Laryssa":51.00,"Matheus":49.00},
+  "Pará": {"Laryssa":48.00,"Matheus":52.00},
+  "Paraíba": {"Laryssa":53.50,"Matheus":46.50},
+  "Paraná": {"Laryssa":47.00,"Matheus":53.00},
+  "Pernambuco": {"Laryssa":52.00,"Matheus":48.00},
+  "Piauí": {"Laryssa":49.50,"Matheus":50.50},
+  "Rio de Janeiro": {"Laryssa":51.50,"Matheus":48.50},
+  "Rio Grande do Norte": {"Laryssa":46.50,"Matheus":53.50},
+  "Rio Grande do Sul": {"Laryssa":52.00,"Matheus":48.00},
+  "Rondônia": {"Laryssa":47.00,"Matheus":53.00},
+  "Roraima": {"Laryssa":50.00,"Matheus":50.00},
+  "Santa Catarina": {"Laryssa":46.50,"Matheus":53.50},
+  "São Paulo": {"Laryssa":54.00,"Matheus":46.00},
+  "Sergipe": {"Laryssa":48.50,"Matheus":51.50},
+  "Tocantins": {"Laryssa":52.50,"Matheus":47.50}
+};
+
+// Função para definir cor do estado (vencedor)
+function getColor(votes) {
+  if(!votes) return "#cccccc"; // cinza neutro
+  return votes["Laryssa"] >= votes["Matheus"] ? "#ff69b4" : "#1e90ff";
 }
 
-// Candidatos por estado
-const candidatos = {
-  "Acre": "Laryssa",
-  "Alagoas": "Matheus",
-  "Amapá": "Laryssa",
-  "Amazonas": "Matheus",
-  "Bahia": "Laryssa",
-  "Ceará": "Matheus",
-  "Distrito Federal": "Laryssa",
-  "Espírito Santo": "Matheus",
-  "Goiás": "Laryssa",
-  "Maranhão": "Matheus",
-  "Mato Grosso": "Laryssa",
-  "Mato Grosso do Sul": "Matheus",
-  "Minas Gerais": "Laryssa",
-  "Pará": "Matheus",
-  "Paraíba": "Laryssa",
-  "Paraná": "Matheus",
-  "Pernambuco": "Laryssa",
-  "Piauí": "Matheus",
-  "Rio de Janeiro": "Laryssa",
-  "Rio Grande do Norte": "Matheus",
-  "Rio Grande do Sul": "Laryssa",
-  "Rondônia": "Matheus",
-  "Roraima": "Laryssa",
-  "Santa Catarina": "Matheus",
-  "São Paulo": "Laryssa",
-  "Sergipe": "Matheus",
-  "Tocantins": "Laryssa"
-};
-
-// Percentual aproximado e votos por estado
-const votosPorEstado = {
-  "Mato Grosso": {"Laryssa": {percent:54.38,votos:45062}, "Matheus": {percent:45.62,votos:40819}},
-  // Adiciona os outros estados aqui seguindo o mesmo formato
-};
-
-// Fetch do GeoJSON oficial do Brasil (somente estados)
+// Carrega GeoJSON do Brasil (somente estados)
 fetch("https://raw.githubusercontent.com/giuliano-macedo/geodata-br-states/main/geojson/br_states.json")
-  .then(response => response.json())
+  .then(res => res.json())
   .then(data => {
 
-    // Adiciona informações de candidato e votos no GeoJSON
-    data.features.forEach(f => {
-      const nome = f.properties.name;
-      f.properties.candidato = candidatos[nome] || null;
-      f.properties.votes = votosPorEstado[nome] || {};
-    });
-
-    // Cria camada do GeoJSON com estilo e popup
     const layer = L.geoJSON(data, {
       style: function(feature) {
+        const votes = votosPorEstado[feature.properties.name];
         return {
-          fillColor: getColor(feature.properties.candidato),
-          color: '#000', // contorno preto sério
+          fillColor: getColor(votes),
+          color: "#000", // contorno preto
           weight: 2,
           fillOpacity: 0.7
         };
       },
       onEachFeature: function(feature, layer) {
-        if(feature.properties.name) {
-          let popupContent = `<strong>${feature.properties.name}</strong><br>`;
-          const votes = feature.properties.votes;
-          for(let c in votes) {
-            popupContent += `${c}: ${votes[c].percent}% (~${votes[c].votos.toLocaleString()} votos)<br>`;
-          }
-          layer.bindPopup(popupContent);
+        const votes = votosPorEstado[feature.properties.name];
+        if(votes){
+          layer.bindPopup(`
+            <strong>${feature.properties.name}</strong><br>
+            Laryssa ${votes["Laryssa"].toFixed(2)}%<br>
+            Matheus ${votes["Matheus"].toFixed(2)}%
+          `);
+        } else {
+          layer.bindPopup(feature.properties.name);
         }
       }
     }).addTo(map);
 
-    // Ajusta zoom para mostrar só o Brasil
     map.fitBounds(layer.getBounds());
-
   })
   .catch(err => console.error("Erro ao carregar GeoJSON:", err));
