@@ -1,12 +1,9 @@
-// Inicializa o mapa
 var map = L.map('map').setView([-14.2, -51.9], 4);
 
-// Adiciona o mapa base
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: 'Map data © OpenStreetMap contributors'
 }).addTo(map);
 
-// Função de cores por candidato
 function getColor(candidato) {
   switch(candidato) {
     case "Laryssa": return "#ff69b4";
@@ -15,7 +12,6 @@ function getColor(candidato) {
   }
 }
 
-// Estilo de cada estado
 function style(feature) {
   return {
     fillColor: getColor(feature.properties.candidato),
@@ -25,19 +21,17 @@ function style(feature) {
   };
 }
 
-// Popup interativo
 function onEachFeature(feature, layer) {
   if(feature.properties && feature.properties.name) {
     layer.bindPopup(feature.properties.name + " - " + feature.properties.candidato);
   }
 }
 
-// Busca o GeoJSON oficial direto do GitHub
+// Link oficial do GeoJSON só do Brasil
 fetch("https://raw.githubusercontent.com/giuliano-macedo/geodata-br-states/main/geojson/br_states.json")
   .then(response => response.json())
   .then(data => {
 
-    // Define o candidato de cada estado
     const candidatos = {
       "Acre": "Laryssa",
       "Alagoas": "Matheus",
@@ -68,13 +62,15 @@ fetch("https://raw.githubusercontent.com/giuliano-macedo/geodata-br-states/main/
       "Tocantins": "Laryssa"
     };
 
-    // Adiciona a propriedade candidato em cada estado
+    // Adiciona candidato só para estados válidos do Brasil
     data.features.forEach(f => {
-      f.properties.candidato = candidatos[f.properties.name] || "Laryssa";
+      if(candidatos[f.properties.name]) {
+        f.properties.candidato = candidatos[f.properties.name];
+      } else {
+        f.properties.candidato = "Laryssa"; // fallback
+      }
     });
 
-    // Adiciona o GeoJSON no mapa
     L.geoJSON(data, { style: style, onEachFeature: onEachFeature }).addTo(map);
-
   })
-  .catch(err => console.error("Erro ao carregar o GeoJSON:", err));
+  .catch(err => console.error("Erro ao carregar o GeoJSON oficial:", err));
