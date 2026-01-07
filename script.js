@@ -6,34 +6,12 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: 'Map data © OpenStreetMap contributors'
 }).addTo(map);
 
-// Cores por candidato
+// Função para cores por candidato
 function getColor(candidato) {
   switch(candidato) {
-    case "Laryssa": return "#ff69b4";
-    case "Matheus": return "#1e90ff";
-    default: return "#cccccc"; // cinza neutro
-  }
-}
-
-// Estilo dos estados
-function style(feature) {
-  return {
-    fillColor: getColor(feature.properties.candidato),
-    weight: 2, // contorno mais visível
-    color: '#000', // cor do contorno
-    fillOpacity: 0.7
-  };
-}
-
-// Função do popup detalhado
-function onEachFeature(feature, layer) {
-  if (feature.properties && feature.properties.name) {
-    const votes = feature.properties.votes || {};
-    let popupContent = `<strong>${feature.properties.name}</strong><br>`;
-    for (let candidato in votes) {
-      popupContent += `${candidato}: ${votes[candidato].percent}% (~${votes[candidato].votos.toLocaleString()} votos)<br>`;
-    }
-    layer.bindPopup(popupContent);
+    case "Laryssa": return "#ff69b4"; // rosa
+    case "Matheus": return "#1e90ff"; // azul
+    default: return "#cccccc"; // cinza neutro se não definido
   }
 }
 
@@ -70,28 +48,46 @@ const candidatos = {
 
 // Percentual aproximado e votos por estado
 const votosPorEstado = {
-  "Acre": {"Laryssa": {percent:54.38,votos:45062}, "Matheus": {percent:45.62,votos:40819}},
-  "Alagoas": {"Laryssa": {percent:50.12,votos:50000}, "Matheus": {percent:49.88,votos:49750}},
-  "Amapá": {"Laryssa": {percent:60.00,votos:30000}, "Matheus": {percent:40.00,votos:20000}},
-  "Amazonas": {"Laryssa": {percent:48.50,votos:200000}, "Matheus": {percent:51.50,votos:212500}},
-  "Bahia": {"Laryssa": {percent:55.00,votos:1500000}, "Matheus": {percent:45.00,votos:1230000}},
-  // Continua para os 27 estados...
-  "Mato Grosso": {"Laryssa": {percent:54.38,votos:45062}, "Matheus": {percent:45.62,votos:40819}}
+  "Mato Grosso": {"Laryssa": {percent:54.38,votos:45062}, "Matheus": {percent:45.62,votos:40819}},
+  // Adiciona os outros estados aqui seguindo o mesmo formato
 };
 
-// Fetch do GeoJSON oficial só do Brasil
+// Fetch do GeoJSON oficial do Brasil (somente estados)
 fetch("https://raw.githubusercontent.com/giuliano-macedo/geodata-br-states/main/geojson/br_states.json")
   .then(response => response.json())
   .then(data => {
+
+    // Adiciona informações de candidato e votos no GeoJSON
     data.features.forEach(f => {
       const nome = f.properties.name;
       f.properties.candidato = candidatos[nome] || null;
       f.properties.votes = votosPorEstado[nome] || {};
     });
 
-    const layer = L.geoJSON(data, { style: style, onEachFeature: onEachFeature }).addTo(map);
+    // Cria camada do GeoJSON com estilo e popup
+    const layer = L.geoJSON(data, {
+      style: function(feature) {
+        return {
+          fillColor: getColor(feature.properties.candidato),
+          color: '#000', // contorno preto sério
+          weight: 2,
+          fillOpacity: 0.7
+        };
+      },
+      onEachFeature: function(feature, layer) {
+        if(feature.properties.name) {
+          let popupContent = `<strong>${feature.properties.name}</strong><br>`;
+          const votes = feature.properties.votes;
+          for(let c in votes) {
+            popupContent += `${c}: ${votes[c].percent}% (~${votes[c].votos.toLocaleString()} votos)<br>`;
+          }
+          layer.bindPopup(popupContent);
+        }
+      }
+    }).addTo(map);
 
     // Ajusta zoom para mostrar só o Brasil
     map.fitBounds(layer.getBounds());
+
   })
-  .catch(err => console.error("Erro ao carregar GeoJSON oficial:", err));
+  .catch(err => console.error("Erro ao carregar GeoJSON:", err));
